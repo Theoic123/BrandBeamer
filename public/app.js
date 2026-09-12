@@ -211,6 +211,7 @@ function save() {
 }
 function persistDraft() {
   clearTimeout(saveTimer);
+  saveTimer = null;
   try {
     localStorage.setItem(key, JSON.stringify(state));
     $("save-status").textContent = "草稿已保存至本机";
@@ -218,7 +219,9 @@ function persistDraft() {
     $("save-status").textContent = "本机存储不可用，请导出草稿";
   }
 }
-window.addEventListener("pagehide", persistDraft);
+window.addEventListener("pagehide", () => {
+  if (saveTimer) persistDraft();
+});
 function slideHTML(slide, index, brand = state.brand) {
   const special = ["cover", "closing"].includes(slide.type);
   const brandHTML = `${brand.logo ? `<img class="slide-logo" src="${esc(brand.logo)}" alt="机构 Logo">` : '<span class="slide-brand-symbol">◈</span>'}<span>${esc(brand.institution || "YOUR BRAND")}</span>`;

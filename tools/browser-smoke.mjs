@@ -54,12 +54,18 @@ try {
     /style-minimal/,
   );
   await page.locator("#brand-open").click();
+  const stalePage = await page.context().newPage();
+  await stalePage.goto("http://127.0.0.1:3210");
+  await stalePage.locator("#slide.style-minimal h2").waitFor();
   await page.locator('[data-brand-style="editorial"]').click();
   await page.locator("#brand-form button[type=submit]").click();
   assert.match(
     await page.locator("#slide").getAttribute("class"),
     /style-editorial/,
   );
+  await stalePage.reload();
+  await stalePage.locator("#slide.style-editorial h2").waitFor();
+  await stalePage.close();
   await page.reload();
   await page.locator("#slide.style-editorial h2").waitFor();
   await page.screenshot({
@@ -74,6 +80,10 @@ try {
   assert.match(await page.locator("#time-count").innerText(), /3 分 0 秒/);
   await page.locator("#next-slide").click();
   await page.locator("#slide-title").fill("已经编辑的标题");
+  assert.equal(await page.locator("#slide h2").innerText(), "已经编辑的标题");
+  await page.reload();
+  await page.locator("#slide h2").waitFor();
+  await page.locator("#next-slide").click();
   assert.equal(await page.locator("#slide h2").innerText(), "已经编辑的标题");
   await page.locator("#notes").fill("完整讲稿".repeat(300));
   await page.locator("#refine").click();
