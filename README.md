@@ -4,6 +4,8 @@
 
 BrandBeamer 是基于 [cityu-beamer](https://github.com/inscripoem/cityu-beamer) 改造的轻量演示稿工作台，适合学校项目汇报、实验室分享和企业内部提案。网页编辑器与 Beamer 导出共用结构化内容。
 
+![BrandBeamer 工作台：材料输入、品牌演示稿预览与逐页编辑](docs/workbench.png)
+
 > **当前默认是无需密钥的规则演示模式。** 它按输入材料提取和组织内容，不调用 AI，也不会冒充 AI 输出。真实 AI 生成和单页精简接口已实现；配置服务端 `.env` 后可使用。模型质量取决于所配置的服务与模型。
 
 ## 三步运行
@@ -75,6 +77,8 @@ npm test
 ```
 
 12 项测试使用 Node 内置测试框架，并关闭测试进程隔离以兼容受限 Windows 环境。覆盖请求校验、演示生成、模拟 AI 上游、错误处理、静态文件边界、ZIP 结构与 CRC、Logo 校验及 LaTeX 转义。CI 另外运行浏览器流程测试与 XeLaTeX 编译，并保留截图、PDF 和导出包作为测试产物。真实付费模型调用不属于离线测试。
+
+首版完整验证记录：[GitHub Actions](https://github.com/Theoic123/BrandBeamer/actions/runs/34681801193)。三项任务（Node 测试、浏览器流程、Beamer 编译）均通过。浏览器测试还检查打印页面的要点和页脚没有超出画布。
 
 ## 项目结构
 
