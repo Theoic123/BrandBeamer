@@ -6,7 +6,7 @@ BrandBeamer 是基于 [cityu-beamer](https://github.com/inscripoem/cityu-beamer)
 
 ![BrandBeamer 工作台：材料输入、品牌演示稿预览与逐页编辑](docs/workbench.png)
 
-> **当前默认是无需密钥的规则演示模式。** 它按输入材料提取和组织内容，不调用 AI，也不会冒充 AI 输出。真实 AI 生成和单页精简接口已实现；配置服务端 `.env` 后可使用。模型质量取决于所配置的服务与模型。
+> **当前默认是无需密钥的规则演示模式。** 它按输入材料提取和组织内容，不调用 AI，也不会冒充 AI 输出。可在「AI 设置」中选择网站提供的模型，或填写 / 导入自己的 API 配置，再进行真实 AI 生成和单页精简。模型质量取决于所配置的服务与模型。
 
 ## 三步运行
 
@@ -45,23 +45,43 @@ npm start
 
 生成会替换当前演示稿。重要版本建议先导出 JSON 草稿；品牌信息独立于内容保存。
 
-## 配置真实 AI
+## 接入 AI
 
-复制 `.env.example` 为 `.env`（Windows PowerShell：`Copy-Item .env.example .env`），填写：
+点击生成方式附近的 **AI 设置**，选择以下一种来源：
 
-```dotenv
-AI_API_KEY=your-provider-key
-AI_BASE_URL=https://your-provider.example/v1
-AI_MODEL=your-provider-model
-PORT=3000
-HOST=127.0.0.1
+- **网站提供**：选择管理员已配置的模型。网站密钥只保存在服务器中，不会返回浏览器。未配置的模型会明确标注。
+- **我的 API**：选择 OpenAI、Claude、Qwen、Gemini 或 OpenAI 兼容服务，填写 API Key、模型 ID 和 API Base URL。也可以从 JSON 文件导入配置，检查后再应用。
+
+OpenAI / Qwen / 兼容服务使用 Chat Completions；Claude 使用 Messages；Gemini 使用原生 generateContent。模型输入框允许填写服务商实际支持的模型 ID，预设列表不代表你的账户已开通对应模型。
+
+用户常说的「ChatGPT 5.4」在 OpenAI API 中对应 `gpt-5.4`，见 [官方模型文档](https://developers.openai.com/api/docs/models/gpt-5.4)。Qwen 的接口地址与工作空间 / 区域有关，请从自己的控制台复制 Base URL；中转平台则选择它实际提供的协议和模型 ID。
+
+**测试连接**会发送一次少量文本请求，可能产生 API 费用。连接成功后点击应用，再选择 AI 生成。测试不会替换当前演示稿。生成和单页精简使用同一份已应用配置；接口失败不会自动切换为演示模式。
+
+### 网站管理员配置
+
+复制 `.env.example` 为 `.env`（PowerShell：`Copy-Item .env.example .env`）。按需填写 `OPENAI_API_KEY`、`ANTHROPIC_API_KEY`、`QWEN_API_KEY`、`GEMINI_API_KEY`，以及对应的 `_MODEL` / `_BASE_URL`。所有配置项和默认值见 [.env.example](.env.example)。保存后重启 Node 服务。
+
+旧的 `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` 仍作为默认兼容接口配置使用。无需一次配置所有服务；只配置你准备使用的服务即可。
+
+### 个人配置文件
+
+可导入以下形状的 UTF-8 JSON 文件，最大 16 KB：
+
+```json
+{
+  "provider": "compatible",
+  "baseUrl": "https://your-provider.example/v1",
+  "model": "your-model-id",
+  "apiKey": "your-api-key"
+}
 ```
 
-`AI_BASE_URL` 支持兼容 Chat Completions 的服务地址，程序会补充 `/chat/completions`，也支持完整的该端点地址。填写你所用服务实际支持的模型。修改后重启服务，再在页面中选择 **AI 生成**。
+`provider` 支持 `openai`、`anthropic`、`qwen`、`gemini`、`compatible`。导入只填充设置，不会立即调用模型。个人接口需要使用公网 HTTPS 地址，不支持 localhost、局域网地址或自动跳转。
 
-密钥只由 Node 服务读取；浏览器请求只携带材料、文本配置和必要的页面内容。Logo 不会发送给模型。`.env` 被 Git 忽略，也不会被静态服务器提供。
+个人密钥只保留在当前页面内存中，刷新后需要重新填写；不进入 localStorage、演示稿 JSON 或 Beamer 导出。调用时配置会经本网站服务器转发给你选定的服务商，因此请只在你信任的 BrandBeamer 部署上输入密钥。含密钥的配置文件请自行妥善保管，不要提交到 Git；`.env` 已被忽略且不会由静态服务器提供。
 
-接口错误、超时和未配置密钥都会给出提示，不会悄悄切换到规则演示。AI 输出需经结构与长度校验，讲述秒数会调整至目标总时长。使用前仍应核对内容事实；提示词约束无法保证模型绝不出错。
+Logo 不发送给模型，生成只发送材料和必要的品牌文本。模型返回需经结构与长度校验，讲述秒数会调整至目标总时长。正式使用前仍需核对内容事实。
 
 ## PDF 与 Beamer
 
@@ -86,9 +106,11 @@ npm test
 
 ```text
 server.mjs                 Node HTTP 服务、AI/演示生成、校验
+ai-service.mjs             多模型协议、配置与上游请求
 public/index.html          工作台结构
 public/styles.css          品牌预览、响应式与打印样式
 public/app.js              编辑状态、交互、草稿和演示
+public/ai-settings.js       网站 / 个人 AI 设置与连接测试
 public/export.js           Beamer 源码与无依赖 ZIP 打包
 templates/beamer/          通用品牌主题与上游许可证
 tests/                     Node 自动化测试

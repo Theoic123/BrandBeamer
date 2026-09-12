@@ -10,11 +10,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
       - run: npm install --prefix .artifacts/browser --no-save playwright
       - run: node .artifacts/browser/node_modules/playwright/cli.js install --with-deps chromium
       - run: sudo apt-get install -y --no-install-recommends fonts-noto-cjk
       - run: node tools/browser-smoke.mjs
+      - run: node tools/browser-ai-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -26,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
       - run: npm run check
       - run: npm test
   beamer:
@@ -36,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
       - name: Install XeLaTeX and Chinese fonts
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends texlive-xetex texlive-lang-chinese texlive-fonts-recommended
       - run: node tools/create-tex-fixture.mjs

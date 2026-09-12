@@ -11,12 +11,16 @@ import {
 } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import {
+  DEFAULT_AI_BASE_URL,
+  DEFAULT_AI_TIMEOUT_MS,
+  DEFAULT_MODEL,
+  createAiService,
+} from "./ai-service.mjs";
+
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PORT = 3000;
 const DEFAULT_HOST = "127.0.0.1";
-const DEFAULT_MODEL = "gpt-4o-mini";
-const DEFAULT_AI_BASE_URL = "https://api.openai.com/v1/chat/completions";
-const DEFAULT_AI_TIMEOUT_MS = 30_000;
 const MAX_JSON_BYTES = 1024 * 1024;
 const MAX_MATERIAL_LENGTH = 12_000;
 const MAX_INSTRUCTION_LENGTH = 2_000;
@@ -167,6 +171,7 @@ function getRuntimeConfig(options = {}) {
   const envFile =
     options.envFile ?? join(options.rootDir ?? MODULE_DIR, ".env");
   const env = loadEnv({ envFile, overrides: options.env });
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   return {
     env,
     model: valueFromEnv(env, "AI_MODEL", DEFAULT_MODEL),
@@ -174,7 +179,18 @@ function getRuntimeConfig(options = {}) {
     aiTimeoutMs: Number.isFinite(Number(options.aiTimeoutMs))
       ? Number(options.aiTimeoutMs)
       : DEFAULT_AI_TIMEOUT_MS,
-    fetchImpl: options.fetchImpl ?? globalThis.fetch,
+    fetchImpl,
+    aiService: createAiService({
+      env,
+      fetchImpl,
+      // An injected transport is an explicitly trusted test seam. Personal
+      // URL syntax and obvious private-address checks still apply; production
+      // requests use the pinned https transport inside ai-service.mjs.
+      trustedFetch: options.fetchImpl !== undefined,
+      aiTimeoutMs: Number.isFinite(Number(options.aiTimeoutMs))
+        ? Number(options.aiTimeoutMs)
+        : DEFAULT_AI_TIMEOUT_MS,
+    }),
   };
 }
 
@@ -211,9 +227,14 @@ function sendError(res, error) {
     res.destroy();
     return;
   }
-  const status = error instanceof HttpError ? error.status : 500;
-  const message = error instanceof HttpError ? error.message : "服务器内部错误";
-  const headers = error instanceof HttpError ? error.headers : {};
+  const hasHttpStatus =
+    error instanceof HttpError ||
+    (Number.isInteger(error?.status) &&
+      error.status >= 400 &&
+      error.status <= 599);
+  const status = hasHttpStatus ? error.status : 500;
+  const message = hasHttpStatus ? error.message : "服务器内部错误";
+  const headers = hasHttpStatus ? (error.headers ?? {}) : {};
   jsonResponse(res, status, { error: message }, headers);
 }
 
@@ -310,7 +331,14 @@ function validateGenerateInput(input) {
     throw new HttpError(400, "mode 必须是 ai 或 demo");
   }
 
-  return { material, title, duration: input.duration, brand, mode: input.mode };
+  return {
+    material,
+    title,
+    duration: input.duration,
+    brand,
+    mode: input.mode,
+    ...(input.ai === undefined ? {} : { ai: input.ai }),
+  };
 }
 
 function validateInstruction(value) {
@@ -333,13 +361,11 @@ function validateSlideInput(slide) {
   const bullets = slide.bullets === undefined ? [] : slide.bullets;
   if (!Array.isArray(bullets))
     throw new HttpError(400, "slide.bullets 必须是数组");
-  const safeBullets = bullets
-    .slice(0, 5)
-    .map((bullet, index) =>
-      validateString(bullet, `slide.bullets[${index}]`, {
-        max: MAX_INPUT_BULLET_LENGTH,
-      }),
-    );
+  const safeBullets = bullets.slice(0, 5).map((bullet, index) =>
+    validateString(bullet, `slide.bullets[${index}]`, {
+      max: MAX_INPUT_BULLET_LENGTH,
+    }),
+  );
   const notes =
     slide.notes === undefined
       ? ""
@@ -585,96 +611,6 @@ function demoRefine(slide, instruction) {
   };
 }
 
-function chatCompletionsUrl(baseUrl) {
-  let url;
-  try {
-    url = new URL(baseUrl);
-  } catch {
-    throw new HttpError(502, "AI_BASE_URL 配置无效");
-  }
-  if (!/\/chat\/completions\/?$/iu.test(url.pathname)) {
-    url.pathname = `${url.pathname.replace(/\/$/u, "")}/chat/completions`;
-  }
-  return url.toString();
-}
-
-async function requestAi({ config, messages }) {
-  const apiKey = valueFromEnv(config.env, "AI_API_KEY");
-  if (!apiKey) throw new HttpError(503, "AI 服务未配置，请设置 AI_API_KEY");
-  if (typeof config.fetchImpl !== "function")
-    throw new HttpError(503, "当前运行环境不支持 AI 请求");
-
-  const url = chatCompletionsUrl(config.baseUrl);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.aiTimeoutMs);
-  try {
-    let response;
-    try {
-      response = await config.fetchImpl(url, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${apiKey}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: config.model,
-          messages,
-          temperature: 0.2,
-        }),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (error?.name === "AbortError" || controller.signal.aborted)
-        throw new HttpError(504, "AI 服务响应超时");
-      throw new HttpError(502, "AI 服务请求失败");
-    }
-
-    let responseText = "";
-    try {
-      responseText =
-        typeof response.text === "function"
-          ? await response.text()
-          : JSON.stringify(await response.json());
-    } catch (error) {
-      if (error?.name === "AbortError" || controller.signal.aborted)
-        throw new HttpError(504, "AI 服务响应超时");
-      throw new HttpError(502, "AI 服务返回内容无法读取");
-    }
-    const responseOk =
-      response.ok === undefined
-        ? !(
-            Number.isFinite(Number(response.status)) &&
-            Number(response.status) >= 400
-          )
-        : response.ok;
-    if (!responseOk)
-      throw new HttpError(502, `AI 服务返回错误（HTTP ${response.status}）`);
-
-    try {
-      return JSON.parse(responseText);
-    } catch {
-      throw new HttpError(502, "AI 服务返回的 JSON 无效");
-    }
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function responseContent(payload) {
-  const content =
-    payload?.choices?.[0]?.message?.content ?? payload?.choices?.[0]?.text;
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => (typeof part === "string" ? part : (part?.text ?? "")))
-      .join("");
-  }
-  if (isRecord(content) && typeof content.text === "string")
-    return content.text;
-  if (typeof content !== "string")
-    throw new ModelResponseError("AI 返回中缺少文本内容");
-  return content;
-}
-
 function parseModelJson(text) {
   let candidate = String(text).trim();
   const fenced = candidate.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu);
@@ -690,11 +626,6 @@ function parseModelJson(text) {
   } catch {
     throw new ModelResponseError("AI 返回的 JSON 无效");
   }
-}
-
-function redactSecret(text, secret) {
-  if (!secret) return text;
-  return String(text).split(secret).join("[已隐藏]");
 }
 
 function generationMessages(input) {
@@ -724,16 +655,17 @@ async function generate(input, config) {
   if (input.mode === "demo") return { deck: demoDeck(input), mode: "demo" };
 
   try {
-    const payload = await requestAi({
-      config,
+    const result = await config.aiService.infer({
+      ai: input.ai,
       messages: generationMessages(input),
     });
-    const modelText = redactSecret(
-      responseContent(payload),
-      valueFromEnv(config.env, "AI_API_KEY"),
-    );
-    const modelJson = parseModelJson(modelText);
-    return { deck: normaliseModelDeck(modelJson, input), mode: "ai" };
+    const modelJson = parseModelJson(result.text);
+    return {
+      deck: normaliseModelDeck(modelJson, input),
+      mode: "ai",
+      provider: result.provider,
+      model: result.model,
+    };
   } catch (error) {
     if (error instanceof ModelResponseError)
       throw new HttpError(502, `AI 返回格式无效：${error.message}`);
@@ -750,18 +682,18 @@ async function refine(input, config) {
   if (mode === "demo") return { slide: demoRefine(slide, instruction) };
 
   try {
-    const payload = await requestAi({
-      config,
+    const result = await config.aiService.infer({
+      ai: input.ai,
       messages: refineMessages(slide, instruction),
     });
-    const modelText = redactSecret(
-      responseContent(payload),
-      valueFromEnv(config.env, "AI_API_KEY"),
-    );
-    const modelJson = parseModelJson(modelText);
+    const modelJson = parseModelJson(result.text);
     const rawSlide = isRecord(modelJson?.slide) ? modelJson.slide : modelJson;
     const normalised = normaliseModelSlide(rawSlide, 0);
-    return { slide: fitSeconds([normalised], slide.seconds)[0] };
+    return {
+      slide: fitSeconds([normalised], slide.seconds)[0],
+      provider: result.provider,
+      model: result.model,
+    };
   } catch (error) {
     if (error instanceof ModelResponseError)
       throw new HttpError(502, `AI 返回格式无效：${error.message}`);
@@ -864,6 +796,48 @@ function routeAllowsMethod(req, res, method) {
   return false;
 }
 
+function assertSameOriginPost(req) {
+  const fetchSite = String(req.headers["sec-fetch-site"] ?? "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  if (fetchSite === "cross-site") {
+    throw new HttpError(403, "跨站请求已拒绝");
+  }
+
+  const originHeader = req.headers.origin;
+  if (originHeader === undefined) return;
+  const origin = String(originHeader).trim();
+  if (!origin || origin.toLowerCase() === "null") {
+    throw new HttpError(403, "请求来源无效");
+  }
+  let parsedOrigin;
+  try {
+    parsedOrigin = new URL(origin);
+  } catch {
+    throw new HttpError(403, "请求来源无效");
+  }
+  if (!/^https?:$/iu.test(parsedOrigin.protocol) || !req.headers.host) {
+    throw new HttpError(403, "请求来源不匹配");
+  }
+  const forwardedProto = String(req.headers["x-forwarded-proto"] ?? "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  const protocol =
+    forwardedProto === "https" || req.socket.encrypted ? "https:" : "http:";
+  const expectedOrigin = `${protocol}//${String(req.headers.host).trim()}`;
+  let expected;
+  try {
+    expected = new URL(expectedOrigin);
+  } catch {
+    throw new HttpError(403, "请求来源不匹配");
+  }
+  if (parsedOrigin.origin !== expected.origin) {
+    throw new HttpError(403, "请求来源不匹配");
+  }
+}
+
 export function createServer(options = {}) {
   const rootDir = resolve(options.rootDir ?? MODULE_DIR);
   const publicDir = resolve(options.publicDir ?? join(rootDir, "public"));
@@ -890,6 +864,7 @@ export function createServer(options = {}) {
 
       if (pathname === "/api/generate") {
         if (!routeAllowsMethod(req, res, "POST")) return;
+        assertSameOriginPost(req);
         const body = validateGenerateInput(
           await parseJsonRequest(req, maxBodyBytes),
         );
@@ -899,9 +874,35 @@ export function createServer(options = {}) {
 
       if (pathname === "/api/refine") {
         if (!routeAllowsMethod(req, res, "POST")) return;
+        assertSameOriginPost(req);
         const body = await parseJsonRequest(req, maxBodyBytes);
         if (!isRecord(body)) throw new HttpError(400, "请求体必须是 JSON 对象");
         jsonResponse(res, 200, await refine(body, config));
+        return;
+      }
+
+      if (pathname === "/api/ai/config") {
+        if (!routeAllowsMethod(req, res, "GET")) return;
+        jsonResponse(res, 200, config.aiService.getConfig());
+        return;
+      }
+
+      if (pathname === "/api/ai/test") {
+        if (!routeAllowsMethod(req, res, "POST")) return;
+        assertSameOriginPost(req);
+        const body = await parseJsonRequest(req, maxBodyBytes);
+        if (!isRecord(body)) throw new HttpError(400, "请求体必须是 JSON 对象");
+        const result = await config.aiService.infer({
+          ai: body.ai,
+          test: true,
+          messages: [{ role: "user", content: "Reply OK" }],
+        });
+        jsonResponse(res, 200, {
+          ok: true,
+          provider: result.provider,
+          model: result.model,
+          message: "连接成功",
+        });
         return;
       }
 
@@ -927,7 +928,7 @@ export function createServer(options = {}) {
 
   server.requestTimeout = Number.isFinite(Number(options.requestTimeoutMs))
     ? Number(options.requestTimeoutMs)
-    : 30_000;
+    : 90_000;
   server.headersTimeout = Math.max(
     1_000,
     Math.min(server.requestTimeout, 30_000),

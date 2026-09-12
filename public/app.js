@@ -1,4 +1,5 @@
 import { downloadBeamer } from "./export.js";
+import { createAiSettings } from "./ai-settings.js";
 import {
   extractPalette,
   foregroundFor,
@@ -121,7 +122,7 @@ let busy = false,
   draftBrand,
   toastTimer,
   saveTimer,
-  aiConfigured = false,
+  aiSettings,
   logoSequence = 0;
 let logoPalette = [];
 
@@ -370,15 +371,19 @@ function setSource() {
   modeNote();
 }
 function modeNote() {
+  const configured = Boolean(aiSettings?.hasConfig());
+  const summary = aiSettings?.getSummary() || "AI 配置加载中…";
+  $("ai-config-summary").textContent = summary;
   $("mode-note").textContent =
     state.mode === "demo"
       ? "演示模式按规则整理材料，不调用 AI。"
-      : aiConfigured
-        ? "AI 接口已配置，将发送正文材料生成演示稿。"
-        : "尚未配置 AI。请填写本地 .env 后重启服务。";
+      : configured
+        ? `${summary}，将发送正文材料生成演示稿。`
+        : "尚未配置 AI，请打开 AI 设置。";
 }
 function setBusy(value) {
   busy = value;
+  aiSettings?.setBusy(value);
   document.body.classList.toggle("busy", value);
   [
     "generate",
@@ -394,6 +399,7 @@ function setBusy(value) {
     "layout",
     "seconds",
     "import-json",
+    "ai-config-open",
   ].forEach((id) => ($(id).disabled = value));
   document
     .querySelectorAll("[data-duration]")
@@ -405,7 +411,7 @@ function setBusy(value) {
 }
 async function api(path, payload) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 75000);
+  const timer = setTimeout(() => controller.abort(), 105000);
   try {
     const response = await fetch(path, {
       method: "POST",
@@ -424,6 +430,28 @@ async function api(path, payload) {
     clearTimeout(timer);
   }
 }
+
+function ensureAiConfig() {
+  if (state.mode !== "ai" || aiSettings?.hasConfig()) return true;
+  notify("尚未配置 AI，请先完成 AI 设置。", true);
+  aiSettings?.open();
+  return false;
+}
+
+aiSettings = createAiSettings({
+  isBusy: () => busy,
+  notify,
+  onChange: () => modeNote(),
+  onApply: () => {
+    if (state.mode !== "ai") {
+      state.mode = "ai";
+      $("mode").value = "ai";
+      save();
+    }
+    modeNote();
+  },
+});
+
 function select(index) {
   state.current = Math.max(0, Math.min(index, state.deck.slides.length - 1));
   render();
@@ -458,6 +486,10 @@ $("mode").onchange = () => {
   state.mode = $("mode").value;
   modeNote();
   save();
+  if (state.mode === "ai" && !aiSettings.hasConfig()) {
+    notify("尚未配置 AI，请先完成 AI 设置。", true);
+    aiSettings.open();
+  }
 };
 $("load-example").onclick = () => {
   state.topic = "校园循环计划";
@@ -468,17 +500,20 @@ $("load-example").onclick = () => {
 };
 $("generate").onclick = async () => {
   if (busy) return;
+  if (!ensureAiConfig()) return;
   if (state.material.trim().length < 30)
     return notify("请先输入至少 30 个字的材料，让内容更完整。", true);
   setBusy(true);
   try {
-    const result = await api("/api/generate", {
+    const payload = {
       material: state.material,
       title: state.topic,
       duration: state.duration,
       brand: { ...state.brand, logo: undefined },
       mode: state.mode,
-    });
+    };
+    if (state.mode === "ai") payload.ai = aiSettings.getRequestConfig();
+    const result = await api("/api/generate", payload);
     const parsed = normalizeDraft({
       ...state,
       deck: result.deck,
@@ -546,15 +581,18 @@ $("seconds").addEventListener("blur", () => {
 });
 $("refine").onclick = async () => {
   if (busy) return;
+  if (!ensureAiConfig()) return;
   const selectedId = state.deck.slides[state.current].id;
   const slide = structuredClone(state.deck.slides[state.current]);
   setBusy(true);
   try {
-    const result = await api("/api/refine", {
+    const payload = {
       slide,
       instruction: "精简文字，保留已有事实，让这一页适合口头汇报。",
       mode: state.mode,
-    });
+    };
+    if (state.mode === "ai") payload.ai = aiSettings.getRequestConfig();
+    const result = await api("/api/refine", payload);
     const index = state.deck.slides.findIndex((s) => s.id === selectedId);
     if (index >= 0) {
       const clean = normalizeDraft({
@@ -926,8 +964,5 @@ slideResizeObserver.observe($("presentation-slide"));
 slideResizeObserver.observe($("brand-slide-preview"));
 fetch("/api/health")
   .then((r) => r.json())
-  .then((data) => {
-    aiConfigured = Boolean(data.aiConfigured);
-    modeNote();
-  })
+  .then(() => modeNote())
   .catch(() => notify("未连接到本地服务。编辑与草稿仍可使用。", true));

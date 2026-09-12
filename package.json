@@ -8,7 +8,7 @@
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
     "test": "node --test --test-isolation=none tests/*.test.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --check public/export.js"
+    "check": "node --check server.mjs && node --check ai-service.mjs && node --check public/app.js && node --check public/ai-settings.js && node --check public/export.js"
   },
   "engines": {
     "node": ">=24"

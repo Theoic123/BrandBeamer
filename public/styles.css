@@ -351,6 +351,30 @@ textarea::placeholder {
   color: #969e91;
   line-height: 1.8;
 }
+.ai-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 25px;
+  margin: 2px 0 7px;
+  padding: 0 2px;
+  border-top: 1px solid #edf1ea;
+  border-bottom: 1px solid #edf1ea;
+}
+.ai-config-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: #71806b;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-settings-row .text-button {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 650;
+}
 .source-bottom {
   display: flex;
   gap: 10px;
@@ -969,10 +993,114 @@ dialog::backdrop {
   background: #152a245c;
   backdrop-filter: blur(3px);
 }
+#ai-dialog {
+  width: min(560px, calc(100vw - 30px));
+  max-height: 92vh;
+  overflow-y: auto;
+}
 .dialog-heading {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+}
+.ai-catalog-status-row,
+.ai-test-row,
+.ai-key-row,
+.ai-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-catalog-status-row {
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 7px 10px;
+  background: #f6f8f2;
+  border-radius: 7px;
+}
+.ai-catalog-status-row .input-help {
+  margin: 0;
+}
+.ai-catalog-status-row .text-button {
+  flex-shrink: 0;
+}
+.ai-settings-section {
+  margin-top: 6px;
+}
+.ai-settings-section[hidden] {
+  display: none;
+}
+.ai-settings-section input,
+.ai-settings-section select {
+  margin-bottom: 2px;
+}
+.ai-key-row input {
+  min-width: 0;
+  flex: 1;
+}
+.ai-key-row .text-button {
+  flex-shrink: 0;
+  min-width: 31px;
+}
+.ai-key-actions {
+  justify-content: space-between;
+  margin-top: 6px;
+  color: #8a987e;
+  font-size: 9px;
+}
+.ai-key-actions .text-button {
+  flex-shrink: 0;
+}
+.ai-security-note {
+  margin: 8px 0 0;
+  color: #8a987e;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.ai-import {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #e3e9dd;
+}
+.ai-import .field-label {
+  margin-top: 0;
+}
+.ai-import input[type="file"] {
+  padding: 7px;
+  font-size: 10px;
+}
+.ai-config-sample {
+  overflow-x: auto;
+  margin: 10px 0 0;
+  padding: 10px;
+  background: #f6f8f2;
+  border-radius: 6px;
+  color: #5d705f;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.ai-test-row {
+  align-items: flex-start;
+  margin-top: 17px;
+  padding-top: 14px;
+  border-top: 1px solid #e3e9dd;
+}
+.ai-test-row .button {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 10px;
+}
+.ai-test-row .input-help {
+  min-height: 23px;
+  margin: 3px 0 0;
+}
+.input-help.error,
+#ai-status.error,
+#ai-import-status.error,
+#ai-catalog-status.error {
+  color: #9a513f;
 }
 .dialog-heading h2 {
   font-size: 23px;
@@ -1262,6 +1390,9 @@ dialog::backdrop {
   }
   .source-tip {
     margin-bottom: 10px;
+  }
+  .ai-settings-row {
+    margin-top: 7px;
   }
   .source-heading {
     margin-bottom: 6px;
@@ -1728,6 +1859,21 @@ dialog::backdrop {
   }
   #brand-dialog {
     padding: 19px;
+  }
+  #ai-dialog {
+    padding: 19px;
+  }
+  .ai-test-row {
+    flex-wrap: wrap;
+  }
+  .ai-test-row .input-help {
+    flex-basis: 100%;
+    margin-top: 0;
+  }
+  .ai-key-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 }
 .slide-cover .slide-brand,

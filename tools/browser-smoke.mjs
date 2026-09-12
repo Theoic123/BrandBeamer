@@ -128,6 +128,9 @@ try {
   );
   assert.match(await page.locator("#toast").innerText(), /未配置/);
   assert.equal(await page.locator("#thumbnails .thumbnail").count(), 6);
+  if (await page.locator("#ai-dialog").evaluate((dialog) => dialog.open)) {
+    await page.locator("#ai-close").click();
+  }
   await page.locator("#mode").selectOption("demo");
   await page.locator("#export-toggle").click();
   await page.locator("#export-pdf").click();
