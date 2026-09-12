@@ -52,9 +52,36 @@ const deck = {
     },
   ],
 };
-await writeFile(new URL("main.tex", out), buildTex(deck, brand));
+function documentBody(tex) {
+  const begin = tex.indexOf("\\begin{document}");
+  const end = tex.lastIndexOf("\\end{document}");
+  if (begin < 0 || end < begin) {
+    throw new Error("Generated TeX is missing its document wrapper");
+  }
+  return tex.slice(begin + "\\begin{document}".length, end).trim();
+}
+
+const styleSources = ["expressive", "minimal", "editorial"].map((style) =>
+  buildTex(deck, { ...brand, style }),
+);
+const firstSource = styleSources[0];
+const documentStart = firstSource.slice(
+  0,
+  firstSource.indexOf("\\begin{document}") + "\\begin{document}".length,
+);
+const styledBodies = styleSources.map((source, index) => {
+  const styleCommand =
+    index === 0
+      ? ""
+      : `\\brandsetstyle{${["expressive", "minimal", "editorial"][index]}}\n`;
+  return `${styleCommand}${documentBody(source)}`;
+});
+const fixture = `${documentStart}\n${styledBodies.join("\n\n")}\n\\end{document}\n`;
+await writeFile(new URL("main.tex", out), fixture);
 await copyFile(
   new URL("../templates/beamer/beamerthemeBrand.sty", import.meta.url),
   new URL("beamerthemeBrand.sty", out),
 );
-console.log("Created .artifacts/tex-smoke/main.tex");
+console.log(
+  "Created .artifacts/tex-smoke/main.tex with expressive, minimal, and editorial variants",
+);

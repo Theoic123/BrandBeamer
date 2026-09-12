@@ -1,4 +1,8 @@
+import { foregroundFor, normalizeStyle, readableInk } from "./brand-style.js";
+
 const DEFAULT_PRIMARY = "#2563EB";
+const DEFAULT_INK = "#172033";
+const DEFAULT_ON_PRIMARY = "#FFFFFF";
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 const LATEX_ESCAPES = Object.freeze({
@@ -363,6 +367,20 @@ function normaliseColor(value) {
     : DEFAULT_PRIMARY;
 }
 
+function normaliseDerivedColor(value, fallback) {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (/^#[0-9A-Fa-f]{6}$/.test(candidate)) {
+    return candidate.toUpperCase();
+  }
+  if (candidate.toLowerCase() === "white") {
+    return "#FFFFFF";
+  }
+  if (candidate.toLowerCase() === "black") {
+    return "#000000";
+  }
+  return fallback;
+}
+
 function stringValue(value) {
   return value == null ? "" : String(value);
 }
@@ -490,11 +508,15 @@ function normaliseDeck(deck) {
 
 function normaliseBrand(brand) {
   const input = brand && typeof brand === "object" ? brand : {};
+  const color = normaliseColor(input.color);
   return {
     institution: stringValue(input.institution),
     department: stringValue(input.department),
     presenter: stringValue(input.presenter),
-    color: normaliseColor(input.color),
+    color,
+    style: normalizeStyle(input.style),
+    inkAccent: normaliseDerivedColor(readableInk(color), DEFAULT_INK),
+    onPrimary: normaliseDerivedColor(foregroundFor(color), DEFAULT_ON_PRIMARY),
     logo: parseLogoDataUrl(input.logo),
   };
 }
@@ -527,7 +549,10 @@ export function buildTex(deck = {}, brand = {}) {
     "\\usepackage[UTF8,fontset=fandol]{ctex}",
     "\\usepackage{xcolor}",
     `\\definecolor{BrandPrimary}{HTML}{${safeBrand.color.slice(1)}}`,
+    `\\definecolor{BrandInkAccent}{HTML}{${safeBrand.inkAccent.slice(1)}}`,
+    `\\definecolor{BrandOnPrimary}{HTML}{${safeBrand.onPrimary.slice(1)}}`,
     "\\usetheme{Brand}",
+    `\\brandsetstyle{${safeBrand.style}}`,
     logoCommand,
     `\\title{${escapeLatex(documentTitle)}}`,
     `\\subtitle{${escapeLatex(documentSubtitle)}}`,

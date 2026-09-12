@@ -33,10 +33,39 @@ try {
   await page.locator("#brand-open").click();
   await page.locator("#logo-file").setInputFiles("public/demo/qinghe-logo.png");
   await page.locator("#logo-preview img").waitFor();
+  await page.locator("#logo-colors button").first().waitFor();
+  assert.equal(
+    await page.locator("#logo-colors button").count(),
+    1,
+    "Ignore colored antialias fringes on the monochrome sample logo",
+  );
+  await page.locator("#apply-logo-style").click();
+  assert.equal(
+    await page.locator("#style-options [aria-pressed=true]").count(),
+    1,
+  );
+  await page.locator('[data-brand-style="minimal"]').click();
   await page.locator("#institution").fill("测试品牌");
   await page.locator('[data-color="#284d97"]').click();
   await page.locator("#brand-form button[type=submit]").click();
   assert.equal(await page.locator("#slide .slide-logo").count(), 1);
+  assert.match(
+    await page.locator("#slide").getAttribute("class"),
+    /style-minimal/,
+  );
+  await page.locator("#brand-open").click();
+  await page.locator('[data-brand-style="editorial"]').click();
+  await page.locator("#brand-form button[type=submit]").click();
+  assert.match(
+    await page.locator("#slide").getAttribute("class"),
+    /style-editorial/,
+  );
+  await page.reload();
+  await page.locator("#slide.style-editorial h2").waitFor();
+  await page.screenshot({
+    path: new URL("style-editorial.png", out).pathname,
+    fullPage: true,
+  });
   await page.locator('[data-duration="3"]').click();
   await page.locator("#generate").click();
   await page.waitForFunction(
@@ -69,6 +98,7 @@ try {
   }
   const draft = JSON.parse(await readFile(new URL("draft.json", out), "utf8"));
   assert.equal(draft.brand.institution, "测试品牌");
+  assert.equal(draft.brand.style, "editorial");
   assert.ok(draft.brand.logo.startsWith("data:image/png;"));
   assert.equal(draft.deck.slides.length, 6);
   await page.locator("#export-toggle").click();

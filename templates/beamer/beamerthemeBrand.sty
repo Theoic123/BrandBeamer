@@ -23,10 +23,26 @@
 % The generated main.tex defines BrandPrimary before loading this theme. The
 % fallback keeps the .sty useful when copied into a hand-written document.
 \@ifundefinedcolor{BrandPrimary}{\definecolor{BrandPrimary}{HTML}{2563EB}}{}
+\@ifundefinedcolor{BrandInkAccent}{\definecolor{BrandInkAccent}{HTML}{172033}}{}
+\@ifundefinedcolor{BrandOnPrimary}{\definecolor{BrandOnPrimary}{HTML}{FFFFFF}}{}
 \definecolor{BrandInk}{HTML}{172033}
 \definecolor{BrandMuted}{HTML}{5C677D}
 \definecolor{BrandLine}{HTML}{D8DFEA}
 \definecolor{BrandPaper}{HTML}{F6F8FB}
+
+% Styles are selected by a fixed allowlist. The generated source normalises
+% the value before it reaches this command, and unknown values fall back to
+% expressive so copied hand-written sources remain safe and predictable.
+\def\brand@style{expressive}
+\def\brand@closingtitlecolor{BrandOnPrimary}
+\def\brand@closingsubtitlecolor{BrandOnPrimary}
+
+\newcommand{\brandsetstyle}[1]{%
+  \def\brand@style{expressive}%
+  \ifstrequal{#1}{minimal}{\def\brand@style{minimal}}{}%
+  \ifstrequal{#1}{editorial}{\def\brand@style{editorial}}{}%
+  \brand@applystyle
+}
 
 % Logos are separate files in the export. The theme never embeds or derives a
 % logo from the generated TikZ geometry.
@@ -55,61 +71,144 @@
 % carrying any upstream raster artwork into the export.
 \newcommand{\brand@background}[1]{%
   \begin{tikzpicture}[remember picture,overlay]
-    \ifstrequal{#1}{cover}{%
-      \path[fill=BrandPaper] (current page.south west) rectangle (current page.north east);
-      \path[fill=BrandPrimary!12]
-        (current page.south west) --
-        (current page.south east) --
-        ([xshift=-.34\paperwidth]current page.north east) -- cycle;
-      \path[fill=BrandPrimary]
-        (current page.south west) rectangle
-        ([xshift=.16\paperwidth]current page.north west);
-      \draw[BrandPrimary!65!white,line width=1.2pt]
-        ([xshift=.16\paperwidth]current page.south west) --
-        ([xshift=.34\paperwidth]current page.north east);
-      \brand@placeLogo[0.82cm]
+    \ifdefstring{\brand@style}{minimal}{%
+      \path[fill=white] (current page.south west) rectangle (current page.north east);
+      \draw[BrandInkAccent,line width=.8pt]
+        ([xshift=1cm,yshift=-.52cm]current page.north west) --
+        ([xshift=-1cm,yshift=-.52cm]current page.north east);
+      \draw[BrandInkAccent,line width=.8pt]
+        ([xshift=1cm,yshift=.52cm]current page.south west) --
+        ([xshift=-1cm,yshift=.52cm]current page.south east);
+      \brand@placeLogo[0.64cm]
     }{%
-      \ifstrequal{#1}{closing}{%
-        \path[fill=BrandPrimary] (current page.south west) rectangle (current page.north east);
-        \path[fill=white,opacity=.08]
-          (current page.south west) --
-          (current page.north east) --
-          ([xshift=-.36\paperwidth]current page.north east) -- cycle;
-        \draw[white,opacity=.35,line width=1.1pt]
-          ([xshift=.10\paperwidth]current page.south west) --
-          ([xshift=.74\paperwidth]current page.north east);
-        \brand@placeLogo[0.82cm]
-      }{%
+      \ifdefstring{\brand@style}{editorial}{%
         \path[fill=white] (current page.south west) rectangle (current page.north east);
-        \path[fill=BrandPrimary!7]
-          (current page.south west) rectangle
-          ([xshift=.12\paperwidth]current page.north west);
-        \path[fill=BrandPrimary!8]
-          (current page.south west) --
-          (current page.south east) --
-          ([xshift=-.40\paperwidth]current page.north east) -- cycle;
-        \draw[BrandPrimary!35,line width=.8pt]
-          ([xshift=.12\paperwidth]current page.south west) --
-          ([xshift=.30\paperwidth]current page.north east);
+        \ifstrequal{#1}{cover}{%
+          \path[fill=BrandPrimary!7!white]
+            (current page.south west) rectangle (current page.north east);
+          \path[fill=BrandPrimary!18!white]
+            (current page.south west) rectangle
+            ([yshift=.18\paperheight]current page.south east);
+          \draw[BrandInkAccent,line width=1pt]
+            ([xshift=1cm,yshift=.18\paperheight]current page.south west) --
+            ([xshift=-1cm,yshift=.18\paperheight]current page.south east);
+        }{%
+          \ifstrequal{#1}{closing}{%
+            \path[fill=BrandPrimary!13!white]
+              (current page.south west) rectangle
+              ([yshift=-.95cm]current page.north east);
+            \path[fill=BrandPrimary!7!white]
+              (current page.south west) rectangle
+              ([yshift=.72cm]current page.south east);
+            \draw[BrandInkAccent,line width=.9pt]
+              ([xshift=1cm,yshift=-.95cm]current page.north west) --
+              ([xshift=-1cm,yshift=-.95cm]current page.north east);
+            \draw[BrandInkAccent,line width=.9pt]
+              ([xshift=1cm,yshift=.72cm]current page.south west) --
+              ([xshift=-1cm,yshift=.72cm]current page.south east);
+          }{%
+            \path[fill=BrandPrimary!13!white]
+              (current page.south west) rectangle
+              ([yshift=-.95cm]current page.north east);
+            \draw[BrandInkAccent,line width=.9pt]
+              ([xshift=1cm,yshift=-.95cm]current page.north west) --
+              ([xshift=-1cm,yshift=-.95cm]current page.north east);
+          }%
+        }%
         \brand@placeLogo[0.64cm]
+      }{%
+        \ifstrequal{#1}{cover}{%
+          \path[fill=BrandPaper] (current page.south west) rectangle (current page.north east);
+          \path[fill=BrandPrimary!12]
+            (current page.south west) --
+            (current page.south east) --
+            ([xshift=-.34\paperwidth]current page.north east) -- cycle;
+          \path[fill=BrandPrimary]
+            (current page.south west) rectangle
+            ([xshift=.16\paperwidth]current page.north west);
+          \draw[BrandPrimary!65!white,line width=1.2pt]
+            ([xshift=.16\paperwidth]current page.south west) --
+            ([xshift=.34\paperwidth]current page.north east);
+          \brand@placeLogo[0.82cm]
+        }{%
+          \ifstrequal{#1}{closing}{%
+            \path[fill=BrandPrimary] (current page.south west) rectangle (current page.north east);
+            \path[fill=white,opacity=.08]
+              (current page.south west) --
+              (current page.north east) --
+              ([xshift=-.36\paperwidth]current page.north east) -- cycle;
+            \draw[white,opacity=.35,line width=1.1pt]
+              ([xshift=.10\paperwidth]current page.south west) --
+              ([xshift=.74\paperwidth]current page.north east);
+            \brand@placeLogo[0.82cm]
+          }{%
+            \path[fill=white] (current page.south west) rectangle (current page.north east);
+            \path[fill=BrandPrimary!7]
+              (current page.south west) rectangle
+              ([xshift=.12\paperwidth]current page.north west);
+            \path[fill=BrandPrimary!8]
+              (current page.south west) --
+              (current page.south east) --
+              ([xshift=-.40\paperwidth]current page.north east) -- cycle;
+            \draw[BrandPrimary!35,line width=.8pt]
+              ([xshift=.12\paperwidth]current page.south west) --
+              ([xshift=.30\paperwidth]current page.north east);
+            \brand@placeLogo[0.64cm]
+          }%
+        }%
       }%
     }%
   \end{tikzpicture}%
 }
 
 \setbeamercolor{normal text}{fg=BrandInk,bg=white}
-\setbeamercolor{structure}{fg=BrandPrimary}
+\setbeamercolor{structure}{fg=BrandInkAccent}
 \setbeamercolor{title}{fg=BrandInk}
 \setbeamercolor{subtitle}{fg=BrandMuted}
 \setbeamercolor{frametitle}{fg=BrandInk,bg=}
 \setbeamercolor{framesubtitle}{fg=BrandMuted}
 \setbeamercolor{footline}{fg=BrandMuted,bg=white}
-\setbeamercolor{alerted text}{fg=BrandPrimary}
-\setbeamercolor{example text}{fg=BrandPrimary!80!black}
-\setbeamercolor{block title}{fg=BrandPrimary,bg=BrandPrimary!8!white}
+\setbeamercolor{alerted text}{fg=BrandInkAccent}
+\setbeamercolor{example text}{fg=BrandInkAccent}
+\setbeamercolor{block title}{fg=BrandInkAccent,bg=BrandPrimary!8!white}
 \setbeamercolor{block body}{fg=BrandInk,bg=BrandPaper}
-\setbeamercolor{block title alerted}{fg=white,bg=BrandPrimary}
+\setbeamercolor{block title alerted}{fg=BrandOnPrimary,bg=BrandPrimary}
 \setbeamercolor{block body alerted}{fg=BrandInk,bg=BrandPrimary!4!white}
+
+\newcommand{\brand@applystyle}{%
+  \setbeamercolor{normal text}{fg=BrandInk,bg=white}%
+  \setbeamercolor{structure}{fg=BrandInkAccent}%
+  \setbeamercolor{subtitle}{fg=BrandMuted}%
+  \setbeamercolor{framesubtitle}{fg=BrandMuted}%
+  \setbeamercolor{footline}{fg=BrandMuted,bg=white}%
+  \setbeamercolor{alerted text}{fg=BrandInkAccent}%
+  \setbeamercolor{example text}{fg=BrandInkAccent}%
+  \setbeamercolor{block title}{fg=BrandInkAccent,bg=BrandPrimary!8!white}%
+  \setbeamercolor{block body}{fg=BrandInk,bg=BrandPaper}%
+  \setbeamercolor{block title alerted}{fg=BrandOnPrimary,bg=BrandPrimary}%
+  \setbeamercolor{block body alerted}{fg=BrandInk,bg=BrandPrimary!4!white}%
+  \ifdefstring{\brand@style}{minimal}{%
+    \def\brand@closingtitlecolor{BrandInkAccent}%
+    \def\brand@closingsubtitlecolor{BrandMuted}%
+    \setbeamercolor{title}{fg=BrandInkAccent}%
+    \setbeamercolor{frametitle}{fg=BrandInkAccent,bg=}%
+    \setbeamercolor{block body}{fg=BrandInk,bg=white}%
+  }{%
+    \ifdefstring{\brand@style}{editorial}{%
+      \def\brand@closingtitlecolor{BrandInk}%
+      \def\brand@closingsubtitlecolor{BrandMuted}%
+      \setbeamercolor{title}{fg=BrandInk}%
+      \setbeamercolor{frametitle}{fg=BrandInk,bg=}%
+    }{%
+      \def\brand@closingtitlecolor{BrandOnPrimary}%
+      \def\brand@closingsubtitlecolor{BrandOnPrimary}%
+      \setbeamercolor{title}{fg=BrandInk}%
+      \setbeamercolor{frametitle}{fg=BrandInk,bg=}%
+    }%
+  }%
+}
+
+\brandsetstyle{expressive}
 
 % ctex with fontset=fandol in the generated source provides portable Chinese
 % and Latin fonts; the theme intentionally leaves font selection to ctex.
@@ -127,7 +226,7 @@
 \setbeamertemplate{headline}{}
 \setbeamertemplate{itemize items}[circle]
 \setbeamertemplate{blocks}[rounded][shadow=false]
-\hypersetup{colorlinks=true,urlcolor=BrandPrimary,linkcolor=BrandPrimary}
+\hypersetup{colorlinks=true,urlcolor=BrandInkAccent,linkcolor=BrandInkAccent}
 \setbeamertemplate{background canvas}{\brand@background{content}}
 
 \setbeamertemplate{frametitle}{%
@@ -196,8 +295,8 @@
       \begin{tikzpicture}[remember picture,overlay]
         \node[inner sep=0pt,text width=.78\paperwidth,align=center]
           at (current page.center) {%
-            {\usebeamerfont{title}\color{white}#1\par}%
-            \ifstrempty{#2}{}{\vspace{4mm}{\usebeamerfont{subtitle}\color{white!82}#2\par}}%
+            {\usebeamerfont{title}\color{\brand@closingtitlecolor}#1\par}%
+            \ifstrempty{#2}{}{\vspace{4mm}{\usebeamerfont{subtitle}\color{\brand@closingsubtitlecolor}#2\par}}%
           };
       \end{tikzpicture}%
       \ifstrempty{#4}{}{\transduration{#4}}%

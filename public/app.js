@@ -1,4 +1,12 @@
 import { downloadBeamer } from "./export.js";
+import {
+  extractPalette,
+  foregroundFor,
+  readableInk,
+  normalizeStyle,
+  recommendStyle,
+  STYLE_OPTIONS,
+} from "./brand-style.js";
 
 const $ = (id) => document.getElementById(id);
 const key = "brandbeamer.draft.v1";
@@ -24,6 +32,7 @@ const initialBrand = {
   presenter: "项目团队",
   color: "#164c42",
   logo: null,
+  style: "expressive",
 };
 const exampleSlides = [
   {
@@ -114,6 +123,7 @@ let busy = false,
   saveTimer,
   aiConfigured = false,
   logoSequence = 0;
+let logoPalette = [];
 
 function normalizeDraft(raw) {
   if (
@@ -140,6 +150,7 @@ function normalizeDraft(raw) {
       department: string(b.department, 70),
       presenter: string(b.presenter, 50),
       color: /^#[0-9a-f]{6}$/i.test(b.color) ? b.color : initialBrand.color,
+      style: normalizeStyle(b.style),
       logo,
     },
     deck: {
@@ -196,18 +207,20 @@ function notify(message, error = false) {
 function save() {
   $("save-status").textContent = "正在保存…";
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-      $("save-status").textContent = "草稿已保存至本机";
-    } catch {
-      $("save-status").textContent = "本机存储不可用，请导出草稿";
-    }
-  }, 350);
+  saveTimer = setTimeout(persistDraft, 350);
 }
-function slideHTML(slide, index) {
+function persistDraft() {
+  clearTimeout(saveTimer);
+  try {
+    localStorage.setItem(key, JSON.stringify(state));
+    $("save-status").textContent = "草稿已保存至本机";
+  } catch {
+    $("save-status").textContent = "本机存储不可用，请导出草稿";
+  }
+}
+window.addEventListener("pagehide", persistDraft);
+function slideHTML(slide, index, brand = state.brand) {
   const special = ["cover", "closing"].includes(slide.type);
-  const brand = state.brand;
   const brandHTML = `${brand.logo ? `<img class="slide-logo" src="${esc(brand.logo)}" alt="机构 Logo">` : '<span class="slide-brand-symbol">◈</span>'}<span>${esc(brand.institution || "YOUR BRAND")}</span>`;
   const footer = `${brand.presenter}${brand.presenter && brand.department ? " · " : ""}${brand.department}`;
   const bullets = (slide.bullets || [])
@@ -264,10 +277,12 @@ function fitSlide(el) {
   el.dataset.fit = scale.toFixed(3);
 }
 
-function paintSlide(el, slide, index) {
-  el.className = `slide slide-${slide.type} ${["bullets", "columns"].includes(slide.type) ? "slide-content" : ""} ${slide.bullets.join("").length > 230 || slide.title.length > 36 ? "slide-dense" : ""}`;
-  el.style.setProperty("--brand", state.brand.color);
-  el.innerHTML = slideHTML(slide, index);
+function paintSlide(el, slide, index, brand = state.brand) {
+  el.className = `slide style-${normalizeStyle(brand.style)} slide-${slide.type} ${["bullets", "columns"].includes(slide.type) ? "slide-content" : ""} ${slide.bullets.join("").length > 230 || slide.title.length > 36 ? "slide-dense" : ""}`;
+  el.style.setProperty("--brand", brand.color);
+  el.style.setProperty("--brand-ink", readableInk(brand.color));
+  el.style.setProperty("--on-brand", foregroundFor(brand.color));
+  el.innerHTML = slideHTML(slide, index, brand);
   el.querySelectorAll("img").forEach((img) =>
     img.addEventListener("load", () => fitSlide(el), { once: true }),
   );
@@ -277,7 +292,7 @@ function renderThumbs() {
   $("thumbnails").innerHTML = state.deck.slides
     .map(
       (s, i) =>
-        `<button class="thumbnail ${i === state.current ? "active" : ""}" data-index="${i}" aria-label="第 ${i + 1} 页：${esc(s.title)}" ${i === state.current ? 'aria-current="true"' : ""}><div class="thumb-preview is-${s.type}" style="--brand:${state.brand.color}"><div class="thumb-title">${esc(s.title)}</div><div class="thumb-line"></div><div class="thumb-line short"></div></div><div class="thumb-meta"><span>${String(i + 1).padStart(2, "0")}</span><span>${esc(s.title)}</span></div></button>`,
+        `<button class="thumbnail ${i === state.current ? "active" : ""}" data-index="${i}" aria-label="第 ${i + 1} 页：${esc(s.title)}" ${i === state.current ? 'aria-current="true"' : ""}><div class="thumb-preview style-${normalizeStyle(state.brand.style)} is-${s.type}" style="--brand:${state.brand.color};--brand-ink:${readableInk(state.brand.color)};--on-brand:${foregroundFor(state.brand.color)}"><div class="thumb-title">${esc(s.title)}</div><div class="thumb-line"></div><div class="thumb-line short"></div></div><div class="thumb-meta"><span>${String(i + 1).padStart(2, "0")}</span><span>${esc(s.title)}</span></div></button>`,
     )
     .join("");
 }
@@ -602,9 +617,65 @@ function logoPreview() {
     ? `<img src="${esc(draftBrand.logo)}" alt="上传的 Logo">`
     : "◈";
 }
+async function paletteFromLogo(data) {
+  const image = new Image();
+  image.src = data;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  const ratio = Math.min(
+    1,
+    96 / Math.max(image.naturalWidth, image.naturalHeight),
+  );
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return extractPalette(
+    context.getImageData(0, 0, canvas.width, canvas.height).data,
+  );
+}
+function renderBrandDesign() {
+  const focusedStyle = document.activeElement?.dataset.brandStyle;
+  const focusedColor = document.activeElement?.dataset.logoColor;
+  $("brand-color").value = draftBrand.color;
+  $("color-hex").textContent = draftBrand.color.toUpperCase();
+  $("logo-colors").innerHTML = logoPalette
+    .map(
+      (color) =>
+        `<button type="button" class="logo-color ${color === draftBrand.color ? "selected" : ""}" data-logo-color="${color}" aria-label="使用 Logo 颜色 ${color}" aria-pressed="${color === draftBrand.color}" style="--swatch:${color}"><span></span>${color.toUpperCase()}</button>`,
+    )
+    .join("");
+  $("logo-palette-note").textContent = logoPalette.length
+    ? "从 Logo 中提取的颜色，点击即可预览。"
+    : draftBrand.logo
+      ? "未检测到明显色彩，可使用下方预设或手动选择。"
+      : "上传 Logo 后推荐配色与风格，也可以直接手动选择。";
+  $("apply-logo-style").disabled = logoPalette.length === 0;
+  const recommended = logoPalette.length ? recommendStyle(logoPalette) : null;
+  $("style-options").innerHTML = STYLE_OPTIONS.map(
+    (option) =>
+      `<button type="button" class="style-option ${option.id === draftBrand.style ? "selected" : ""}" data-brand-style="${option.id}" aria-pressed="${option.id === draftBrand.style}"><span class="style-card-art style-${option.id}" style="--brand:${draftBrand.color};--on-brand:${foregroundFor(draftBrand.color)};--brand-ink:${readableInk(draftBrand.color)}"><span class="style-card-mark">◈</span><span class="style-card-title">YOUR NEXT IDEA</span><span class="style-card-line"></span></span><strong>${esc(option.name)}${recommended === option.id ? "<em>推荐</em>" : ""}</strong><small>${esc(option.description)}</small></button>`,
+  ).join("");
+  const index = Math.max(
+    0,
+    state.deck.slides.findIndex((slide) => slide.type === "cover"),
+  );
+  const preview = { ...state.deck.slides[index], type: "cover" };
+  paintSlide($("brand-slide-preview"), preview, index, draftBrand);
+  if (focusedStyle)
+    $("style-options")
+      .querySelector(`[data-brand-style="${normalizeStyle(focusedStyle)}"]`)
+      ?.focus({ preventScroll: true });
+  if (focusedColor && logoPalette.includes(focusedColor))
+    $("logo-colors")
+      .querySelector(`[data-logo-color="${focusedColor}"]`)
+      ?.focus({ preventScroll: true });
+}
 function openBrand() {
-  logoSequence++;
+  const sequence = ++logoSequence;
   draftBrand = { ...state.brand };
+  draftBrand.style = normalizeStyle(draftBrand.style);
+  logoPalette = [];
   ["institution", "department", "presenter"].forEach(
     (id) => ($(id).value = draftBrand[id]),
   );
@@ -613,6 +684,15 @@ function openBrand() {
   $("logo-file").value = "";
   logoPreview();
   $("brand-dialog").showModal();
+  renderBrandDesign();
+  if (draftBrand.logo)
+    paletteFromLogo(draftBrand.logo)
+      .then((colors) => {
+        if (sequence !== logoSequence || !$("brand-dialog").open) return;
+        logoPalette = colors;
+        renderBrandDesign();
+      })
+      .catch(() => {});
 }
 $("brand-open").onclick = $("brand-edit").onclick = openBrand;
 $("brand-close").onclick = () => $("brand-dialog").close();
@@ -621,20 +701,22 @@ $("brand-dialog").addEventListener("close", () => {
 });
 $("brand-color").oninput = () => {
   draftBrand.color = $("brand-color").value;
-  $("color-hex").textContent = draftBrand.color.toUpperCase();
+  renderBrandDesign();
 };
 document.querySelectorAll("[data-color]").forEach(
   (b) =>
     (b.onclick = () => {
       $("brand-color").value = draftBrand.color = b.dataset.color;
-      $("color-hex").textContent = b.dataset.color.toUpperCase();
+      renderBrandDesign();
     }),
 );
 $("logo-remove").onclick = () => {
   logoSequence++;
   draftBrand.logo = null;
+  logoPalette = [];
   $("logo-file").value = "";
   logoPreview();
+  renderBrandDesign();
 };
 $("logo-file").onchange = async () => {
   const sequence = ++logoSequence;
@@ -662,12 +744,42 @@ $("logo-file").onchange = async () => {
     });
     if (!$("brand-dialog").open || sequence !== logoSequence) return;
     draftBrand.logo = data;
+    logoPalette = [];
     logoPreview();
+    renderBrandDesign();
+    const colors = await paletteFromLogo(data);
+    if (!$("brand-dialog").open || sequence !== logoSequence) return;
+    logoPalette = colors;
+    renderBrandDesign();
   } catch {
     if (sequence === logoSequence)
       notify("图片无法读取，请选择有效的 PNG 或 JPG。", true);
   }
 };
+$("logo-colors").onclick = (event) => {
+  const button = event.target.closest("[data-logo-color]");
+  if (!button) return;
+  draftBrand.color = button.dataset.logoColor;
+  renderBrandDesign();
+};
+$("style-options").onclick = (event) => {
+  const button = event.target.closest("[data-brand-style]");
+  if (!button) return;
+  draftBrand.style = normalizeStyle(button.dataset.brandStyle);
+  renderBrandDesign();
+};
+$("apply-logo-style").onclick = () => {
+  if (!logoPalette.length) return;
+  draftBrand.color = logoPalette[0];
+  draftBrand.style = recommendStyle(logoPalette);
+  renderBrandDesign();
+};
+["institution", "department", "presenter"].forEach((id) =>
+  $(id).addEventListener("input", () => {
+    draftBrand[id] = $(id).value.trim();
+    renderBrandDesign();
+  }),
+);
 $("brand-form").onsubmit = (e) => {
   e.preventDefault();
   ["institution", "department", "presenter"].forEach(
@@ -676,7 +788,7 @@ $("brand-form").onsubmit = (e) => {
   state.brand = { ...draftBrand };
   $("brand-dialog").close();
   render();
-  save();
+  persistDraft();
   notify("品牌设置已应用到全部页面。");
 };
 $("export-toggle").onclick = () => {
@@ -808,6 +920,7 @@ const slideResizeObserver = new ResizeObserver((entries) =>
 );
 slideResizeObserver.observe($("slide"));
 slideResizeObserver.observe($("presentation-slide"));
+slideResizeObserver.observe($("brand-slide-preview"));
 fetch("/api/health")
   .then((r) => r.json())
   .then((data) => {

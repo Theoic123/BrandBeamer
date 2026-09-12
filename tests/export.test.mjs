@@ -134,6 +134,32 @@ function referenceCrc32(value) {
   return (checksum ^ 0xffffffff) >>> 0;
 }
 
+function definedHex(tex, name) {
+  const match = tex.match(
+    new RegExp(`\\\\definecolor\\{${name}\\}\\{HTML\\}\\{([0-9A-F]{6})\\}`),
+  );
+  assert.ok(match, `${name} should be defined as a six-digit hex color`);
+  return `#${match[1]}`;
+}
+
+function relativeLuminance(hex) {
+  const channels = [1, 3, 5].map(
+    (offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255,
+  );
+  const linear = channels.map((channel) =>
+    channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function contrastRatio(first, second) {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  const lighter = Math.max(firstLuminance, secondLuminance);
+  const darker = Math.min(firstLuminance, secondLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 test("crc32 matches standard vectors and an independent bitwise implementation", () => {
   assert.equal(crc32(""), 0x00000000);
   assert.equal(crc32("123456789"), 0xcbf43926);
@@ -276,6 +302,37 @@ test("buildTex renders sparse bullet layouts without empty itemize environments"
   assert.equal((oneColumnFrame.match(/\\begin\{itemize\}/g) ?? []).length, 1);
   assert.equal((oneColumnFrame.match(/\\end\{itemize\}/g) ?? []).length, 1);
   assert.doesNotMatch(oneColumnFrame, /\\begin\{itemize\}\s*\\end\{itemize\}/);
+});
+
+test("buildTex allowlists styles and emits readable contrast colors", () => {
+  const color = "#fff6a3";
+  const defaultTex = buildTex({}, { color });
+  assert.match(defaultTex, /\\brandsetstyle\{expressive\}/);
+
+  for (const style of ["expressive", "minimal", "editorial"]) {
+    const tex = buildTex({}, { color, style });
+    assert.ok(tex.includes(`\\brandsetstyle{${style}}`));
+    const inkAccent = definedHex(tex, "BrandInkAccent");
+    const onPrimary = definedHex(tex, "BrandOnPrimary");
+    assert.ok(
+      contrastRatio(inkAccent, "#FFFFFF") >= 4.5,
+      `${style} accent ink should be readable on white`,
+    );
+    assert.ok(
+      contrastRatio(onPrimary, color.toUpperCase()) >= 4.5,
+      `${style} primary foreground should be readable on the brand color`,
+    );
+  }
+
+  const unsafe = buildTex(
+    {},
+    {
+      color,
+      style: "minimal}\\input{evil}",
+    },
+  );
+  assert.match(unsafe, /\\brandsetstyle\{expressive\}/);
+  assert.doesNotMatch(unsafe, /\\input\{evil\}/);
 });
 
 test("parseLogoDataUrl accepts signed PNG/JPEG bytes and rejects unsafe or malformed data", () => {

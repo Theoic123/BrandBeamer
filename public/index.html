@@ -213,12 +213,12 @@
         </div>
       </section>
     </main>
-    <dialog id="brand-dialog">
+    <dialog id="brand-dialog" aria-labelledby="brand-dialog-title">
       <form id="brand-form">
         <div class="dialog-heading">
           <div>
             <div class="panel-eyebrow">MAKE IT YOURS</div>
-            <h2>你的品牌，贯穿每一页。</h2>
+            <h2 id="brand-dialog-title">你的品牌，贯穿每一页。</h2>
           </div>
           <button
             type="button"
@@ -247,6 +247,23 @@
             </button>
           </div>
         </div>
+        <section class="logo-palette-section" aria-label="Logo 配色推荐">
+          <div class="palette-heading">
+            <h3>从 Logo 找到灵感</h3>
+            <button
+              type="button"
+              id="apply-logo-style"
+              class="text-button"
+              disabled
+            >
+              采用推荐组合 ↗
+            </button>
+          </div>
+          <p id="logo-palette-note" class="input-help" aria-live="polite">
+            上传 Logo 后推荐配色与风格。
+          </p>
+          <div id="logo-colors" class="logo-colors"></div>
+        </section>
         <div class="form-grid">
           <div>
             <label class="field-label" for="institution">学校 / 公司名称</label
@@ -304,6 +321,19 @@
         <p class="input-help">
           品牌素材保存在当前浏览器的草稿中，请使用你有权使用的 Logo。
         </p>
+        <section class="brand-styles-section" aria-label="幻灯片风格">
+          <h3>选择幻灯片风格</h3>
+          <p class="input-help">
+            根据 Logo 的颜色特征提供建议，三种风格都可以自由选择。
+          </p>
+          <div id="style-options" class="style-options"></div>
+          <div class="brand-preview-heading">
+            封面预览 <span>确认后应用到全部页面</span>
+          </div>
+          <div class="brand-live-preview">
+            <div id="brand-slide-preview" class="slide"></div>
+          </div>
+        </section>
         <button type="submit" class="button dark dialog-submit">
           应用到所有页面 →
         </button>
