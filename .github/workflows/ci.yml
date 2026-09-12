@@ -1,0 +1,35 @@
+name: Validate
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm run check
+      - run: npm test
+  beamer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install XeLaTeX and Chinese fonts
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends texlive-xetex texlive-lang-chinese texlive-fonts-recommended
+      - run: node tools/create-tex-fixture.mjs
+      - name: Compile Chinese Beamer fixture twice
+        working-directory: .artifacts/tex-smoke
+        run: |
+          xelatex -interaction=nonstopmode -halt-on-error main.tex
+          xelatex -interaction=nonstopmode -halt-on-error main.tex
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: beamer-validation
+          path: .artifacts/tex-smoke/

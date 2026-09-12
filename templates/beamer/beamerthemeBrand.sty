@@ -1,0 +1,212 @@
+% SPDX-License-Identifier: MIT
+%
+% BrandBeamer theme: a substantive neutral adaptation of the original
+% beamerthemeCityU.sty code from the MIT-licensed CityU Beamer project.
+% CityU artwork and branding are not included. See THIRD_PARTY_NOTICES.md.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeBrand}[2026/09/12 v1.0.0 BrandBeamer neutral theme]
+
+\RequirePackage{iftex}
+\ifXeTeX\else
+  \PackageError{beamerthemeBrand}{This theme requires XeLaTeX}
+    {Select XeLaTeX as the compiler. The generated source loads ctex with Fandol fonts.}
+\fi
+\RequirePackage{etoolbox}
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\RequirePackage{xcolor}
+
+\mode<presentation>
+
+\makeatletter
+
+% The generated main.tex defines BrandPrimary before loading this theme. The
+% fallback keeps the .sty useful when copied into a hand-written document.
+\@ifundefinedcolor{BrandPrimary}{\definecolor{BrandPrimary}{HTML}{2563EB}}{}
+\definecolor{BrandInk}{HTML}{172033}
+\definecolor{BrandMuted}{HTML}{5C677D}
+\definecolor{BrandLine}{HTML}{D8DFEA}
+\definecolor{BrandPaper}{HTML}{F6F8FB}
+
+% Logos are separate files in the export. The theme never embeds or derives a
+% logo from the generated TikZ geometry.
+\def\brand@logofile{}
+\newcommand{\brandsetlogo}[1]{\def\brand@logofile{#1}}
+\newcommand{\brand@logo}[1][0.70cm]{%
+  \ifx\brand@logofile\@empty
+  \else
+    \IfFileExists{\brand@logofile}{%
+      \includegraphics[width=.20\paperwidth,height=#1,keepaspectratio]{\brand@logofile}%
+    }{}%
+  \fi
+}
+\newcommand{\brand@placeLogo}[1][0.70cm]{%
+  \ifx\brand@logofile\@empty
+  \else
+    \node[anchor=north east,inner sep=2pt,fill=white,fill opacity=.94,
+      text opacity=1,rounded corners=1pt]
+      at ([xshift=-.72cm,yshift=-.42cm]current page.north east)
+      {\brand@logo[#1]};%
+  \fi
+}
+
+% Every page is drawn from simple vector geometry at compile time. The three
+% variants keep cover, content, and closing pages visually distinct without
+% carrying any upstream raster artwork into the export.
+\newcommand{\brand@background}[1]{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \ifstrequal{#1}{cover}{%
+      \path[fill=BrandPaper] (current page.south west) rectangle (current page.north east);
+      \path[fill=BrandPrimary!12]
+        (current page.south west) --
+        (current page.south east) --
+        ([xshift=-.34\paperwidth]current page.north east) -- cycle;
+      \path[fill=BrandPrimary]
+        (current page.south west) rectangle
+        ([xshift=.16\paperwidth]current page.north west);
+      \draw[BrandPrimary!65!white,line width=1.2pt]
+        ([xshift=.16\paperwidth]current page.south west) --
+        ([xshift=.34\paperwidth]current page.north east);
+      \brand@placeLogo[0.82cm]
+    }{%
+      \ifstrequal{#1}{closing}{%
+        \path[fill=BrandPrimary] (current page.south west) rectangle (current page.north east);
+        \path[fill=white,opacity=.08]
+          (current page.south west) --
+          (current page.north east) --
+          ([xshift=-.36\paperwidth]current page.north east) -- cycle;
+        \draw[white,opacity=.35,line width=1.1pt]
+          ([xshift=.10\paperwidth]current page.south west) --
+          ([xshift=.74\paperwidth]current page.north east);
+        \brand@placeLogo[0.82cm]
+      }{%
+        \path[fill=white] (current page.south west) rectangle (current page.north east);
+        \path[fill=BrandPrimary!7]
+          (current page.south west) rectangle
+          ([xshift=.12\paperwidth]current page.north west);
+        \path[fill=BrandPrimary!8]
+          (current page.south west) --
+          (current page.south east) --
+          ([xshift=-.40\paperwidth]current page.north east) -- cycle;
+        \draw[BrandPrimary!35,line width=.8pt]
+          ([xshift=.12\paperwidth]current page.south west) --
+          ([xshift=.30\paperwidth]current page.north east);
+        \brand@placeLogo[0.64cm]
+      }%
+    }%
+  \end{tikzpicture}%
+}
+
+\setbeamercolor{normal text}{fg=BrandInk,bg=white}
+\setbeamercolor{structure}{fg=BrandPrimary}
+\setbeamercolor{title}{fg=BrandInk}
+\setbeamercolor{subtitle}{fg=BrandMuted}
+\setbeamercolor{frametitle}{fg=BrandInk,bg=}
+\setbeamercolor{framesubtitle}{fg=BrandMuted}
+\setbeamercolor{footline}{fg=BrandMuted,bg=white}
+\setbeamercolor{alerted text}{fg=BrandPrimary}
+\setbeamercolor{example text}{fg=BrandPrimary!80!black}
+\setbeamercolor{block title}{fg=BrandPrimary,bg=BrandPrimary!8!white}
+\setbeamercolor{block body}{fg=BrandInk,bg=BrandPaper}
+\setbeamercolor{block title alerted}{fg=white,bg=BrandPrimary}
+\setbeamercolor{block body alerted}{fg=BrandInk,bg=BrandPrimary!4!white}
+
+% ctex with fontset=fandol in the generated source provides portable Chinese
+% and Latin fonts; the theme intentionally leaves font selection to ctex.
+\setbeamerfont{title}{size=\fontsize{27}{32},series=\bfseries}
+\setbeamerfont{subtitle}{size=\fontsize{12}{16},series=\mdseries}
+\setbeamerfont{author}{size=\fontsize{11}{14},series=\bfseries}
+\setbeamerfont{institute}{size=\fontsize{9}{12},series=\mdseries}
+\setbeamerfont{frametitle}{size=\fontsize{20}{24},series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\fontsize{9}{12},series=\mdseries}
+\setbeamerfont{footline}{size=\fontsize{7}{9},series=\mdseries}
+\setbeamerfont{caption}{size=\footnotesize}
+
+\setbeamersize{text margin left=1cm,text margin right=1cm}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\hypersetup{colorlinks=true,urlcolor=BrandPrimary,linkcolor=BrandPrimary}
+\setbeamertemplate{background canvas}{\brand@background{content}}
+
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \vskip0.65cm
+  \begin{beamercolorbox}[wd=\paperwidth,leftskip=1cm,rightskip=2.5cm plus 1fil,sep=0pt]{frametitle}
+    \usebeamerfont{frametitle}\strut\insertframetitle\strut\par
+    \ifx\insertframesubtitle\@empty\else
+      \vskip0.6mm
+      {\usebeamerfont{framesubtitle}\usebeamercolor[fg]{framesubtitle}\insertframesubtitle\par}%
+    \fi
+  \end{beamercolorbox}
+  \vskip0pt
+}
+
+\setbeamertemplate{footline}{%
+  \leavevmode
+  \hbox to \paperwidth{\hskip1cm\color{BrandLine}\rule{\dimexpr\paperwidth-2cm\relax}{0.35pt}\hfil}%
+  \vskip1mm
+  \hbox{%
+    \begin{beamercolorbox}[wd=.82\paperwidth,leftskip=1cm,rightskip=2mm,sep=0pt]{footline}
+      \usebeamerfont{footline}\strut\insertshorttitle\par
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.18\paperwidth,right,rightskip=1cm,sep=0pt]{footline}
+      \usebeamerfont{footline}\strut\insertframenumber\, / \,\inserttotalframenumber
+    \end{beamercolorbox}%
+  }%
+  \vskip1.6mm
+}
+
+% Export-only cover helper. Keeping the metadata arguments separate lets the
+% JavaScript exporter keep each field escaped while preserving line breaks
+% between institution and department with TeX's own syntax.
+\newcommand{\brandcoverwithmeta}[7]{%
+  \begingroup
+    \setbeamertemplate{background canvas}{}%
+    \begin{frame}[plain,noframenumbering]
+      \brand@background{cover}
+      \begin{tikzpicture}[remember picture,overlay]
+        \node[anchor=north west,inner sep=0pt,text width=.62\paperwidth,align=left]
+          at ([xshift=.275\paperwidth,yshift=-.25\paperheight]current page.north west) {%
+            {\usebeamerfont{title}\usebeamercolor[fg]{title}#1\par}%
+            \ifstrempty{#2}{}{\vspace{4mm}{\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}#2\par}}%
+          };
+        \node[anchor=north west,inner sep=0pt,text width=.55\paperwidth,align=left]
+          at ([xshift=.275\paperwidth,yshift=-.68\paperheight]current page.north west) {%
+            \ifstrempty{#3}{}{ {\usebeamerfont{author}#3\par} }%
+            \ifstrempty{#4}{}{ {\usebeamerfont{institute}#4\par} }%
+            \ifstrempty{#5}{}{\vspace{1mm}{\usebeamerfont{institute}#5\par}}%
+          };
+      \end{tikzpicture}%
+      \ifstrempty{#7}{}{\transduration{#7}}%
+      \ifstrempty{#6}{}{\note{#6}}%
+    \end{frame}%
+  \endgroup
+}
+
+\newcommand{\brandtitlepage}{%
+  \brandcoverwithmeta{\inserttitle}{\insertsubtitle}{\insertauthor}{\insertinstitute}{}{}{}}
+
+\newcommand{\brandclosingwithmeta}[4]{%
+  \begingroup
+    \setbeamertemplate{background canvas}{}%
+    \begin{frame}[plain,noframenumbering]
+      \brand@background{closing}
+      \begin{tikzpicture}[remember picture,overlay]
+        \node[inner sep=0pt,text width=.78\paperwidth,align=center]
+          at (current page.center) {%
+            {\usebeamerfont{title}\color{white}#1\par}%
+            \ifstrempty{#2}{}{\vspace{4mm}{\usebeamerfont{subtitle}\color{white!82}#2\par}}%
+          };
+      \end{tikzpicture}%
+      \ifstrempty{#4}{}{\transduration{#4}}%
+      \ifstrempty{#3}{}{\note{#3}}%
+    \end{frame}%
+  \endgroup
+}
+
+\newcommand{\brandclosing}[2]{\brandclosingwithmeta{#1}{#2}{}{}}
+
+\makeatother
+\mode<all>

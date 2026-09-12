@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#133d35">
+  <meta name="description" content="让好想法，自成一稿。BrandBeamer 把材料变成可编辑、可定制品牌的演示稿。">
+  <title>BrandBeamer · 智稿工作台</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23133d35'/%3E%3Cpath d='M12 10h10a6 6 0 010 12H12zm0 12h12a4 4 0 010 8H12' fill='none' stroke='%23d7f99a' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="/" aria-label="BrandBeamer 首页"><span class="brand-icon">B<span>✦</span></span><span>BrandBeamer<small>智稿 · 让想法有自己的样子</small></span></a>
+    <div class="header-center"><span class="status-dot"></span><span id="save-status" aria-live="polite">本地草稿</span></div>
+    <div class="header-actions"><button class="button subtle" id="brand-open"><span aria-hidden="true">◈</span> 品牌设置</button><button class="button subtle" id="present"><span aria-hidden="true">▷</span> 演示</button><div class="export-wrap"><button class="button dark" id="export-toggle" aria-expanded="false">导出演示稿 <span aria-hidden="true">↗</span></button><div class="export-menu" id="export-menu" hidden><button id="export-pdf">打印 / 保存为 PDF<small>与网页预览一致</small></button><button id="export-tex">下载 Beamer 源码<small>XeLaTeX · ZIP 文件</small></button><button id="export-json">保存可编辑草稿<small>JSON · 可重新导入</small></button><button id="import-json">导入已有草稿</button></div></div></div>
+  </header>
+  <main class="workspace">
+    <aside class="source-panel">
+      <div class="panel-eyebrow">YOUR STORY, YOUR BRAND</div>
+      <h1>让好想法，<br><span>自成一稿。</span></h1>
+      <p class="intro">从一段材料，到一场准备充分的汇报。</p>
+      <div class="source-heading"><h2>创作简报</h2><button class="text-button" id="load-example">试试示例 ↗</button></div>
+      <label class="field-label" for="topic">汇报主题</label><input id="topic" maxlength="80" placeholder="例如：校园循环计划 · 项目汇报">
+      <div class="label-row"><label class="field-label" for="material">你的材料</label><span id="char-count">0 / 12000</span></div>
+      <textarea id="material" maxlength="12000" placeholder="粘贴项目想法、研究摘要或工作笔记。\n\n建议包含：背景、问题、解决方案、进展和下一步。" spellcheck="false"></textarea>
+      <div class="source-tip"><span>✧</span> 信息越具体，故事越清晰。数据以原材料为准。</div>
+      <label class="field-label" id="duration-label">汇报时长</label><div class="segmented" role="group" aria-labelledby="duration-label"><button data-duration="3">3 分钟<small>简短提案</small></button><button data-duration="5" class="selected" aria-pressed="true">5 分钟<small>项目汇报</small></button><button data-duration="10">10 分钟<small>深入分享</small></button></div>
+      <div class="mode-row"><label for="mode">生成方式</label><select id="mode"><option value="demo">演示模式 · 无需密钥</option><option value="ai">AI 生成 · 需配置接口</option></select></div>
+      <button class="button generate" id="generate"><span>✦</span><span id="generate-label">生成我的演示稿</span><span>→</span></button>
+      <p class="mode-note" id="mode-note">演示模式按规则整理材料，不调用 AI。</p>
+      <div class="source-bottom"><span class="tiny-symbol">▱</span><span>为你的下一次登场而准备<small>支持中文 · 品牌定制 · Beamer 导出</small></span></div>
+    </aside>
+    <section class="editor-workspace" aria-label="演示稿工作区">
+      <div class="workspace-heading"><div><div class="panel-eyebrow">PRESENTATION STUDIO</div><div class="document-title"><h2 id="deck-name">校园循环计划</h2><span class="pill" id="deck-mode">示例稿</span></div></div><div class="deck-metrics"><span id="page-count">6 页</span><span class="metric-divider"></span><span id="time-count">目标 5 分钟</span></div></div>
+      <div class="studio-body">
+        <nav class="filmstrip" aria-label="幻灯片列表"><div class="filmstrip-label">页面 <span id="film-count">06</span></div><div id="thumbnails"></div><button id="add-slide" class="add-slide">＋ 添加页面</button></nav>
+        <div class="canvas-area"><div class="canvas-toolbar"><span><span class="live-dot"></span> 实时预览</span><span id="slide-kind">封面</span></div><div class="slide-frame" id="slide-frame"><div id="slide" class="slide"></div></div><div class="canvas-caption"><span id="page-position">01 / 06</span><span>16:9 · 品牌样式已应用</span><div><button id="prev-slide" aria-label="上一页">←</button><button id="next-slide" aria-label="下一页">→</button></div></div>
+          <section class="notes-card"><div class="notes-heading"><h3><span>☷</span> 演讲者笔记</h3><span id="slide-time">建议讲述 30 秒</span></div><textarea id="notes" maxlength="1500" aria-label="演讲者笔记" placeholder="为这一页补充讲述思路…"></textarea><div class="notes-foot">仅供你准备汇报使用，不显示在幻灯片上。</div></section>
+          <div class="canvas-hint"><span>✧</span> 先讲清楚一个想法，再让每一页为它服务。</div>
+        </div>
+        <aside class="inspector"><div class="inspector-heading"><h3>页面编辑</h3><span id="edit-index">01</span></div><label class="field-label" for="slide-title">标题</label><textarea id="slide-title" rows="2" maxlength="80"></textarea><label class="field-label" for="slide-subtitle">副标题</label><textarea id="slide-subtitle" rows="2" maxlength="180" placeholder="补充一句背景或结论"></textarea><label class="field-label" for="slide-bullets">内容要点</label><textarea id="slide-bullets" rows="7" maxlength="700" placeholder="每行一个要点，建议不超过 5 条"></textarea><p class="input-help" id="density-hint">每页一个观点，让内容有呼吸感。</p><button class="button refine" id="refine">✧ 精简这一页</button><div class="inspector-divider"></div><label class="field-label" for="layout">页面版式</label><select id="layout"><option value="cover">封面</option><option value="bullets">要点</option><option value="columns">双栏</option><option value="closing">结束页</option></select><label class="field-label" for="seconds">建议讲述时间（秒）</label><input id="seconds" type="number" min="5" max="600" step="5"><div class="slide-actions"><button id="move-up" aria-label="上移此页">↑ 上移</button><button id="move-down" aria-label="下移此页">↓ 下移</button><button id="delete-slide" class="danger">删除</button></div><div class="brand-summary"><span class="brand-swatch" id="brand-swatch"></span><div><strong id="brand-institution">青禾创新实验室</strong><small>全稿共用品牌设置</small></div><button id="brand-edit" aria-label="编辑品牌">↗</button></div></aside>
+      </div>
+    </section>
+  </main>
+  <dialog id="brand-dialog"><form id="brand-form"><div class="dialog-heading"><div><div class="panel-eyebrow">MAKE IT YOURS</div><h2>你的品牌，贯穿每一页。</h2></div><button type="button" id="brand-close" class="icon-button" aria-label="关闭">×</button></div><p class="dialog-intro">上传学校或公司的 Logo，打造统一的汇报风格。</p><div class="logo-upload"><div id="logo-preview" class="logo-preview">◈</div><div><label class="button subtle upload-label" for="logo-file">上传 Logo</label><input type="file" id="logo-file" accept="image/png,image/jpeg" hidden><p>PNG / JPG，最大 2 MB</p><button class="text-button" type="button" id="logo-remove">移除 Logo</button></div></div><div class="form-grid"><div><label class="field-label" for="institution">学校 / 公司名称</label><input id="institution" maxlength="70"></div><div><label class="field-label" for="department">部门 / 团队</label><input id="department" maxlength="70"></div><div><label class="field-label" for="presenter">汇报人</label><input id="presenter" maxlength="50"></div><div><label class="field-label" for="brand-color">品牌主色</label><div class="color-row"><input type="color" id="brand-color"><span id="color-hex">#164C42</span></div></div></div><div class="color-presets"><button type="button" data-color="#164c42" style="--swatch:#164c42" aria-label="森林绿"></button><button type="button" data-color="#284d97" style="--swatch:#284d97" aria-label="学院蓝"></button><button type="button" data-color="#9b3045" style="--swatch:#9b3045" aria-label="酒红"></button><button type="button" data-color="#69509a" style="--swatch:#69509a" aria-label="紫色"></button><button type="button" data-color="#a65223" style="--swatch:#a65223" aria-label="橙色"></button></div><p class="input-help">品牌素材保存在当前浏览器的草稿中，请使用你有权使用的 Logo。</p><button type="submit" class="button dark dialog-submit">应用到所有页面 →</button></form></dialog>
+  <div id="presentation" class="presentation" hidden><div id="presentation-slide" class="slide"></div><div class="presentation-controls"><button id="presentation-prev" aria-label="上一页">←</button><span id="presentation-position"></span><button id="presentation-next" aria-label="下一页">→</button><button id="presentation-exit">退出演示 · Esc</button></div></div>
+  <div id="print-deck"></div><div id="toast" class="toast" role="status" aria-live="polite" hidden></div><input type="file" accept="application/json,.json" id="json-file" hidden>
+  <script type="module" src="/app.js"></script>
+</body></html>
