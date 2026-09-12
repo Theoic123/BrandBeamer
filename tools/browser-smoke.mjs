@@ -122,6 +122,7 @@ try {
     () => document.getElementById("toast").textContent === "草稿已导入。",
   );
   await page.locator("#mode").selectOption("ai");
+  await page.locator("#ai-close").click();
   await page.locator("#generate").click();
   await page.waitForFunction(
     () => !document.getElementById("generate").disabled,
