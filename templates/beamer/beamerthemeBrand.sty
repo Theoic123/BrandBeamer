@@ -86,35 +86,14 @@
         \ifstrequal{#1}{cover}{%
           \path[fill=BrandPrimary!7!white]
             (current page.south west) rectangle (current page.north east);
-          \path[fill=BrandPrimary!18!white]
-            (current page.south west) rectangle
-            ([yshift=.18\paperheight]current page.south east);
-          \draw[BrandInkAccent,line width=1pt]
-            ([xshift=1cm,yshift=.18\paperheight]current page.south west) --
-            ([xshift=-1cm,yshift=.18\paperheight]current page.south east);
-        }{%
-          \ifstrequal{#1}{closing}{%
-            \path[fill=BrandPrimary!13!white]
-              (current page.south west) rectangle
-              ([yshift=-.95cm]current page.north east);
-            \path[fill=BrandPrimary!7!white]
-              (current page.south west) rectangle
-              ([yshift=.72cm]current page.south east);
-            \draw[BrandInkAccent,line width=.9pt]
-              ([xshift=1cm,yshift=-.95cm]current page.north west) --
-              ([xshift=-1cm,yshift=-.95cm]current page.north east);
-            \draw[BrandInkAccent,line width=.9pt]
-              ([xshift=1cm,yshift=.72cm]current page.south west) --
-              ([xshift=-1cm,yshift=.72cm]current page.south east);
-          }{%
-            \path[fill=BrandPrimary!13!white]
-              (current page.south west) rectangle
-              ([yshift=-.95cm]current page.north east);
-            \draw[BrandInkAccent,line width=.9pt]
-              ([xshift=1cm,yshift=-.95cm]current page.north west) --
-              ([xshift=-1cm,yshift=-.95cm]current page.north east);
-          }%
-        }%
+        }{}%
+        \ifstrequal{#1}{closing}{%
+          \path[fill=BrandPrimary!7!white]
+            (current page.south west) rectangle (current page.north east);
+        }{}%
+        \path[fill=BrandPrimary]
+          (current page.south west) rectangle
+          ([xshift=.18cm]current page.north west);
         \brand@placeLogo[0.64cm]
       }{%
         \ifstrequal{#1}{cover}{%
