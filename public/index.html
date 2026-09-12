@@ -435,10 +435,9 @@
           <p class="ai-security-note">
             请求经本网站转发到所选服务商，请仅在可信网站输入密钥。刷新页面需重新填写。
           </p>
-          <div class="ai-import">
-            <label class="field-label" for="ai-config-file"
-              >导入 JSON 配置</label
-            >
+          <details class="ai-import" id="ai-import-details">
+            <summary>导入 JSON 配置</summary>
+            <label class="field-label" for="ai-config-file">配置文件</label>
             <input
               id="ai-config-file"
               type="file"
@@ -455,7 +454,7 @@
   "apiKey": ""
 }</pre>
             <p id="ai-import-status" class="input-help" aria-live="polite"></p>
-          </div>
+          </details>
         </section>
         <div class="ai-test-row">
           <button type="button" id="ai-test" class="button subtle">

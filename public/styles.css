@@ -1063,7 +1063,13 @@ dialog::backdrop {
   border-top: 1px solid #e3e9dd;
 }
 .ai-import .field-label {
-  margin-top: 0;
+  margin-top: 12px;
+}
+.ai-import summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #365247;
 }
 .ai-import input[type="file"] {
   padding: 7px;

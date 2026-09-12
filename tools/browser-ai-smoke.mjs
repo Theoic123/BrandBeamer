@@ -149,6 +149,7 @@ try {
     apiKey: secret,
   };
   const countBeforeImport = calls.length;
+  await page.locator("#ai-import-details summary").click();
   await page.locator("#ai-config-file").setInputFiles({
     name: "malformed-config.json",
     mimeType: "application/json",

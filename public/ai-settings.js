@@ -570,6 +570,13 @@ export function createAiSettings({
     if (!draft) return;
     invalidateImport();
     draft.source = source.value === "personal" ? "personal" : "site";
+    if (draft.source === "personal" && !draft.provider) {
+      const preset = catalog.providers[0];
+      draft.provider = preset?.id || "openai";
+      draft.baseUrl = preset?.defaultBaseUrl || "";
+      draft.model = preset?.defaultModel || "";
+      draft.apiKey = "";
+    }
     invalidateTest();
     renderDraft();
   });
@@ -624,6 +631,7 @@ export function createAiSettings({
     keyToggle.textContent = "显示";
     configFile.value = "";
     importStatus.textContent = "";
+    document.getElementById("ai-import-details").open = false;
     notifyChange();
   });
   catalogRetry.addEventListener("click", loadCatalog);
