@@ -18,10 +18,11 @@ try {
     await new Promise((r) => setTimeout(r, 100));
   }
   browser = await chromium.launch();
-  const page = await browser.newPage({
+  const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
     deviceScaleFactor: 1,
   });
+  const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("http://127.0.0.1:3210");
