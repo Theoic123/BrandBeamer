@@ -454,7 +454,10 @@ export function createAiSettings({
   }
 
   function close() {
-    if (dialog.open) dialog.close();
+    if (dialog.open) {
+      clearDialogDraft();
+      dialog.close();
+    }
   }
 
   function apply() {
@@ -622,7 +625,7 @@ export function createAiSettings({
     event.preventDefault();
     apply();
   });
-  dialog.addEventListener("close", () => {
+  function clearDialogDraft() {
     invalidateImport();
     invalidateTest();
     draft = null;
@@ -633,6 +636,14 @@ export function createAiSettings({
     importStatus.textContent = "";
     document.getElementById("ai-import-details").open = false;
     notifyChange();
+  }
+  dialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    close();
+  });
+  dialog.addEventListener("close", () => {
+    // The native close event is queued; it must not clear a newly opened session.
+    if (!dialog.open) clearDialogDraft();
   });
   catalogRetry.addEventListener("click", loadCatalog);
   configFile.addEventListener("change", async () => {
