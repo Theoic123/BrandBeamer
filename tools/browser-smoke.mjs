@@ -91,11 +91,35 @@ try {
   await page.locator("#export-toggle").click();
   await page.locator("#export-pdf").click();
   assert.equal(await page.locator("#print-deck .print-page").count(), 6);
+  await page.emulateMedia({ media: "print" });
+  const overflowPages = await page
+    .locator("#print-deck .slide")
+    .evaluateAll((slides) =>
+      slides.flatMap((slide, index) => {
+        const frame = slide.getBoundingClientRect();
+        const footer = slide
+          .querySelector(".slide-footer")
+          .getBoundingClientRect();
+        const items = [...slide.querySelectorAll(".slide-bullets li")];
+        return footer.bottom > frame.bottom + 1 ||
+          items.some(
+            (item) => item.getBoundingClientRect().bottom > footer.top + 1,
+          )
+          ? [index + 1]
+          : [];
+      }),
+    );
+  assert.deepEqual(
+    overflowPages,
+    [],
+    "Every printed slide must contain all bullets and its footer",
+  );
   await page.pdf({
     path: new URL("browser-print.pdf", out).pathname,
     printBackground: true,
     preferCSSPageSize: true,
   });
+  await page.emulateMedia({ media: "screen" });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(
     await page.evaluate(

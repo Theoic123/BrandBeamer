@@ -1,5 +1,7 @@
 :root {
-  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-family:
+    Inter, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+    sans-serif;
   color: #243b35;
   background: #f5f6f2;
   font-synthesis: none;
@@ -1396,4 +1398,46 @@ dialog::backdrop {
 .slide-dense.slide-cover h2,
 .slide-dense.slide-closing h2 {
   font-size: 3.8cqw;
+}
+#print-deck[data-measuring] {
+  display: block;
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  width: 320mm;
+  pointer-events: none;
+}
+#print-deck .print-page {
+  width: 320mm;
+  height: 180mm;
+}
+.slide-content .slide-logo {
+  max-height: 3.2cqw;
+}
+.cover-spark {
+  width: 11cqw;
+  height: 11cqw;
+  font-size: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 48.5%,
+      currentColor 48.5%,
+      currentColor 51.5%,
+      transparent 51.5%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 48.5%,
+      currentColor 48.5%,
+      currentColor 51.5%,
+      transparent 51.5%
+    );
+}
+.cover-spark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  transform: rotate(45deg);
 }

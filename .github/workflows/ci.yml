@@ -13,6 +13,7 @@ jobs:
           node-version: '24'
       - run: npm install --prefix .artifacts/browser --no-save playwright
       - run: node .artifacts/browser/node_modules/playwright/cli.js install --with-deps chromium
+      - run: sudo apt-get install -y --no-install-recommends fonts-noto-cjk
       - run: node tools/browser-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()

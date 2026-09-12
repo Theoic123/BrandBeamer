@@ -218,10 +218,60 @@ function slideHTML(slide, index) {
     .join("");
   return `${special ? '<div class="cover-art"></div><div class="cover-spark">✳</div>' : ""}<div class="slide-inner"><div class="slide-brand">${brandHTML}</div>${special ? `<div class="slide-main">${slide.type === "cover" ? '<div class="slide-kicker">IDEAS INTO IMPACT</div>' : ""}<h2>${esc(slide.title)}</h2><p class="slide-subtitle">${esc(slide.subtitle)}</p></div>` : `<h2>${esc(slide.title)}</h2>${slide.subtitle ? `<p class="slide-subtitle">${esc(slide.subtitle)}</p>` : ""}<ul class="slide-bullets">${bullets}</ul>`}<div class="slide-footer"><span>${esc(footer || state.deck.title)}</span><span>${String(index + 1).padStart(2, "0")} / ${String(state.deck.slides.length).padStart(2, "0")}</span></div></div>`;
 }
+function fitSlide(el) {
+  if (!el.isConnected || el.getBoundingClientRect().width === 0) return;
+  const targets = [
+    ...el.querySelectorAll(
+      "h2, .slide-subtitle, .slide-bullets, .slide-bullets li, .bullet-number, .slide-brand, .slide-footer",
+    ),
+  ];
+  const properties = [
+    "font-size",
+    "line-height",
+    "margin-top",
+    "margin-bottom",
+    "row-gap",
+    "column-gap",
+    "padding-top",
+    "padding-bottom",
+  ];
+  for (const target of targets)
+    for (const property of properties) target.style.removeProperty(property);
+  const metrics = targets.map((target) => {
+    const computed = getComputedStyle(target);
+    return {
+      target,
+      values: properties
+        .map((property) => [property, computed.getPropertyValue(property)])
+        .filter(([, value]) => /^\d+(\.\d+)?px$/.test(value))
+        .map(([property, value]) => [property, parseFloat(value)]),
+    };
+  });
+  const inner = el.querySelector(".slide-inner");
+  const footer = el.querySelector(".slide-footer");
+  const fits = () =>
+    footer.getBoundingClientRect().bottom <=
+      el.getBoundingClientRect().bottom -
+        parseFloat(getComputedStyle(inner).paddingBottom) +
+        1 && inner.scrollHeight <= inner.clientHeight + 1;
+  let scale = 1;
+  while (!fits() && scale > 0.35) {
+    scale *= 0.9;
+    for (const { target, values } of metrics)
+      for (const [property, value] of values)
+        target.style.setProperty(property, `${value * scale}px`);
+  }
+  el.dataset.fit = scale.toFixed(3);
+}
+
 function paintSlide(el, slide, index) {
   el.className = `slide slide-${slide.type} ${["bullets", "columns"].includes(slide.type) ? "slide-content" : ""} ${slide.bullets.join("").length > 230 || slide.title.length > 36 ? "slide-dense" : ""}`;
   el.style.setProperty("--brand", state.brand.color);
   el.innerHTML = slideHTML(slide, index);
+  el.querySelectorAll("img").forEach((img) =>
+    img.addEventListener("load", () => fitSlide(el), { once: true }),
+  );
+  requestAnimationFrame(() => fitSlide(el));
 }
 function renderThumbs() {
   $("thumbnails").innerHTML = state.deck.slides
@@ -688,6 +738,7 @@ $("json-file").onchange = async () => {
   }
 };
 function preparePrint() {
+  $("print-deck").dataset.measuring = "true";
   $("print-deck").replaceChildren();
   state.deck.slides.forEach((slide, i) => {
     const page = document.createElement("div");
@@ -697,6 +748,8 @@ function preparePrint() {
     page.append(el);
     $("print-deck").append(page);
   });
+  $("print-deck").querySelectorAll(".slide").forEach(fitSlide);
+  delete $("print-deck").dataset.measuring;
 }
 window.addEventListener("beforeprint", preparePrint);
 $("export-pdf").onclick = async () => {
@@ -750,6 +803,11 @@ document.addEventListener("keydown", (e) => {
 });
 setSource();
 render();
+const slideResizeObserver = new ResizeObserver((entries) =>
+  entries.forEach(({ target }) => fitSlide(target)),
+);
+slideResizeObserver.observe($("slide"));
+slideResizeObserver.observe($("presentation-slide"));
 fetch("/api/health")
   .then((r) => r.json())
   .then((data) => {
